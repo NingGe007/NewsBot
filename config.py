@@ -5,8 +5,7 @@
 import os
 
 FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 
 ALLOWED_SOURCES = [
     "sec filing", "sec", "earnings report", "earnings",
