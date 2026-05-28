@@ -44,9 +44,8 @@ jobs:
 
       - name: 发送日报
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           HOUR=$(date -u +%H)
           if [ -n "${{ github.event.inputs.report_type }}" ]; then
