@@ -11,6 +11,9 @@ on:
         options:
           - 早报
           - 晚报
+  schedule:
+    - cron: '30 12 * * 1-5'
+    - cron: '30 20 * * 1-5'
 
 jobs:
   daily-report:
