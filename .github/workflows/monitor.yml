@@ -2,6 +2,8 @@ name: News Monitor
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0,30 13,14,15,16,17,18,19,20 * * 1-5'
 
 jobs:
   monitor:
