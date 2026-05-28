@@ -1,5 +1,5 @@
 # ============================================================
-# daily_report.py — 每日早报/晚报
+# daily_report.py — 每日早报/晚报（DeepSeek 引擎）
 # ============================================================
 
 import json
@@ -9,15 +9,15 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
-from groq import Groq
-import google.generativeai as genai
-from config import GEMINI_API_KEY, GROQ_API_KEY
+from openai import OpenAI
+from config import DEEPSEEK_API_KEY
 from state import load_today_pushed, clear_today_pushed
 from feishu import send_daily_report
 
-genai.configure(api_key=GEMINI_API_KEY)
-gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-groq_client = Groq(api_key=GROQ_API_KEY)
+client = OpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
+)
 
 HEADERS = {"User-Agent": "NewsBot/1.0 contact@newsbot.com"}
 
@@ -30,7 +30,6 @@ REPORT_RSS = [
 
 
 def fetch_market_indices() -> str:
-    """抓取美股三大指数最新数据"""
     indices = {
         "^GSPC": "S&P 500",
         "^DJI": "道指",
@@ -146,9 +145,9 @@ REPORT_PROMPT = """你是一位专业的美股投资分析师，请生成一份�
 注意：整体控制在400字以内，语言傻瓜直白"""
 
 
-def _call_groq(prompt: str) -> str:
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+def _call_deepseek(prompt: str) -> str:
+    response = client.chat.completions.create(
+        model="deepseek-chat",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=1200,
@@ -156,21 +155,11 @@ def _call_groq(prompt: str) -> str:
     return response.choices[0].message.content.strip()
 
 
-def _call_gemini(prompt: str) -> str:
-    response = gemini_model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=1200)
-    )
-    return response.text.strip()
-
-
 def generate_report(report_type: str) -> str:
-    # 1. 三大指数数据
     print(f"[{report_type}] 抓取指数数据...")
     indices_str = fetch_market_indices()
     print(f"[{report_type}] 指数: {indices_str}")
 
-    # 2. 今日推送记录
     records = load_today_pushed()
     if records:
         records_summary = []
@@ -188,13 +177,11 @@ def generate_report(report_type: str) -> str:
     else:
         pushed_str = "今日暂无推送记录"
 
-    # 3. 市场头条
     print(f"[{report_type}] 抓取市场头条...")
     headlines = fetch_market_headlines(hours=14)
     headlines_str = "\n".join(headlines) if headlines else "暂无头条"
     print(f"[{report_type}] 获取到 {len(headlines)} 条头条")
 
-    # 4. 生成报告
     prompt = REPORT_PROMPT.format(
         report_type=report_type,
         indices=indices_str,
@@ -204,15 +191,11 @@ def generate_report(report_type: str) -> str:
     )
 
     try:
-        print(f"[{report_type}] 用 Groq 生成...")
-        return _call_groq(prompt)
+        print(f"[{report_type}] 用 DeepSeek 生成...")
+        return _call_deepseek(prompt)
     except Exception as e:
-        print(f"[{report_type}] Groq 失败: {e}，切换 Gemini...")
-        try:
-            return _call_gemini(prompt)
-        except Exception as e2:
-            print(f"[{report_type}] Gemini 也失败: {e2}")
-            return f"报告生成失败。\n\n⚠️ 以上内容仅供参考，不构成投资建议。"
+        print(f"[{report_type}] DeepSeek 失败: {e}")
+        return f"报告生成失败。\n\n⚠️ 以上内容仅供参考，不构成投资建议。"
 
 
 def send_morning_report():
