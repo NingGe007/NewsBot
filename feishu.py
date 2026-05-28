@@ -1,120 +1,68 @@
-# ============================================================
-# feishu.py — 飞书 Webhook 推送
-# ============================================================
-
 import requests
-import json
-from config import FEISHU_WEBHOOK_URL
+import os
 
+WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "")
 
-def send_feishu_text(text: str) -> bool:
-    """发送纯文本消息到飞书"""
-    payload = {
-        "msg_type": "text",
-        "content": {"text": text}
-    }
-    return _post(payload)
+def send_news_alert(title, content, direction="bullish", score=0, tickers=None, sectors=None, etfs=None, source="", link=""):
+    """Send news alert via ServerChan (WeChat push)"""
+    if not WEBHOOK_URL:
+        print("[WARN] No WEBHOOK_URL configured, skipping push")
+        return
 
+    # Build message
+    emoji = "🟢📈" if direction == "bullish" else "🔴📉"
+    direction_cn = "看涨" if direction == "bullish" else "看跌"
 
-def send_feishu_markdown(title: str, content: str) -> bool:
-    """
-    发送富文本卡片消息（飞书自定义机器人支持的格式）
-    content 支持基础 markdown
-    """
-    payload = {
-        "msg_type": "interactive",
-        "card": {
-            "config": {"wide_screen_mode": True},
-            "header": {
-                "title": {"tag": "plain_text", "content": title},
-                "template": "blue"
-            },
-            "elements": [
-                {
-                    "tag": "markdown",
-                    "content": content
-                }
-            ]
-        }
-    }
-    return _post(payload)
+    msg_title = f"{emoji} {direction_cn} {score}/10 | {title[:50]}"
 
+    desp_parts = [
+        f"## {emoji} {direction_cn}信号 · 评分 {score}/10",
+        f"标题: {title}",
+        f"来源: {source}",
+    ]
 
-def send_news_alert(title_header: str, content: str, color: str = "blue") -> bool:
-    """
-    发送单条新闻推送卡片
-    color: green=看涨, red=看跌, blue=中性
-    """
-    color_map = {"green": "green", "red": "red", "blue": "blue", "orange": "orange"}
-    template = color_map.get(color, "blue")
+    if tickers:
+        desp_parts.append(f"相关股票: {', '.join(tickers) if isinstance(tickers, list) else tickers}")
+    if sectors:
+        desp_parts.append(f"板块: {', '.join(sectors) if isinstance(sectors, list) else sectors}")
+    if etfs:
+        desp_parts.append(f"ETF: {', '.join(etfs) if isinstance(etfs, list) else etfs}")
+    if content:
+        desp_parts.append(f"\n分析: {content}")
+    if link:
+        desp_parts.append(f"\n[📰 原文链接]({link})")
 
-    payload = {
-        "msg_type": "interactive",
-        "card": {
-            "config": {"wide_screen_mode": True},
-            "header": {
-                "title": {"tag": "plain_text", "content": title_header},
-                "template": template
-            },
-            "elements": [
-                {
-                    "tag": "markdown",
-                    "content": content
-                }
-            ]
-        }
-    }
-    return _post(payload)
-
-
-def send_daily_report(report_type: str, content: str) -> bool:
-    """
-    发送早报/晚报
-    report_type: "早报" 或 "晚报"
-    """
-    from datetime import datetime
-    today = datetime.now().strftime("%Y-%m-%d")
-    title = f"全球财经{report_type} — {today}"
-    color = "orange" if report_type == "早报" else "purple"
-
-    payload = {
-        "msg_type": "interactive",
-        "card": {
-            "config": {"wide_screen_mode": True},
-            "header": {
-                "title": {"tag": "plain_text", "content": title},
-                "template": color
-            },
-            "elements": [
-                {
-                    "tag": "markdown",
-                    "content": content
-                }
-            ]
-        }
-    }
-    return _post(payload)
-
-
-def _post(payload: dict) -> bool:
-    """底层POST请求"""
-    if not FEISHU_WEBHOOK_URL:
-        print("[飞书] 未配置 FEISHU_WEBHOOK_URL，跳过推送")
-        return False
+    desp = "\n\n".join(desp_parts)
 
     try:
-        resp = requests.post(
-            FEISHU_WEBHOOK_URL,
-            headers={"Content-Type": "application/json"},
-            data=json.dumps(payload),
-            timeout=10
-        )
-        result = resp.json()
-        if result.get("code") == 0 or result.get("StatusCode") == 0:
-            return True
+        resp = requests.post(WEBHOOK_URL, json={
+            "title": msg_title,
+            "desp": desp
+        }, timeout=10)
+        if resp.status_code == 200:
+            print(f"[OK] ServerChan push success: {msg_title}")
         else:
-            print(f"[飞书] 推送失败: {result}")
-            return False
+            print(f"[ERR] ServerChan push failed: {resp.status_code} {resp.text}")
     except Exception as e:
-        print(f"[飞书] 请求异常: {e}")
-        return False
+        print(f"[ERR] ServerChan push exception: {e}")
+
+
+def send_daily_report(report_type, content):
+    """Send daily report via ServerChan"""
+    if not WEBHOOK_URL:
+        print("[WARN] No WEBHOOK_URL configured, skipping push")
+        return
+
+    msg_title = f"📊 美股{report_type} | NewsBot"
+
+    try:
+        resp = requests.post(WEBHOOK_URL, json={
+            "title": msg_title,
+            "desp": content
+        }, timeout=10)
+        if resp.status_code == 200:
+            print(f"[OK] Daily report push success")
+        else:
+            print(f"[ERR] Daily report push failed: {resp.status_code} {resp.text}")
+    except Exception as e:
+        print(f"[ERR] Daily report push exception: {e}")
