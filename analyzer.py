@@ -1,17 +1,17 @@
 # ============================================================
-# analyzer.py — Gemini + Groq 双引擎，自动切换
+# analyzer.py — DeepSeek AI 分析引擎
 # ============================================================
 
 import json
 import re
 import time
-import google.generativeai as genai
-from groq import Groq
-from config import GEMINI_API_KEY, GROQ_API_KEY
+from openai import OpenAI
+from config import DEEPSEEK_API_KEY
 
-genai.configure(api_key=GEMINI_API_KEY)
-gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-groq_client = Groq(api_key=GROQ_API_KEY)
+client = OpenAI(
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
+)
 
 ANALYSIS_PROMPT = """你是一位专业美股投资分析师。请分析以下金融新闻，判断其对美股市场的影响。
 
@@ -36,7 +36,6 @@ ANALYSIS_PROMPT = """你是一位专业美股投资分析师。请分析以下�
 
 
 def _parse_json(raw: str) -> dict | None:
-    """解析 AI 返回的 JSON"""
     raw = re.sub(r"```json\s*", "", raw)
     raw = re.sub(r"```\s*", "", raw)
     raw = raw.strip()
@@ -56,87 +55,38 @@ def _parse_json(raw: str) -> dict | None:
         return None
 
 
-def _call_gemini(prompt: str) -> str | None:
-    """调用 Gemini"""
+def _call_deepseek(prompt: str) -> str | None:
     try:
-        response = gemini_model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=0.2,
-                max_output_tokens=800,
-            )
-        )
-        return response.text.strip()
-    except Exception as e:
-        if "429" in str(e):
-            raise RateLimitError("Gemini")
-        raise e
-
-
-def _call_groq(prompt: str) -> str | None:
-    """调用 Groq"""
-    try:
-        response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        response = client.chat.completions.create(
+            model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=800,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        if "429" in str(e) or "rate" in str(e).lower():
-            raise RateLimitError("Groq")
-        raise e
-
-
-class RateLimitError(Exception):
-    def __init__(self, provider):
-        self.provider = provider
+        print(f"[DeepSeek] 调用失败: {e}")
+        return None
 
 
 def analyze_article(title: str, source: str, content: str) -> dict | None:
-    """
-    分析文章，Gemini 优先，429 后自动切换 Groq，
-    两者都失败则等待后重试一次
-    """
     prompt = ANALYSIS_PROMPT.format(
         title=title,
         source=source,
         content=content[:2000] if content else "（无正文摘要）"
     )
 
-    providers = [
-        ("Gemini", _call_gemini),
-        ("Groq", _call_groq),
-    ]
+    raw = _call_deepseek(prompt)
+    if raw:
+        result = _parse_json(raw)
+        if result:
+            return result
+        print("[DeepSeek] JSON解析失败，重试...")
 
-    for provider_name, call_fn in providers:
-        try:
-            raw = call_fn(prompt)
-            if not raw:
-                continue
-            result = _parse_json(raw)
-            if result:
-                return result
-            else:
-                print(f"[{provider_name}] JSON解析失败，尝试下一个引擎")
-                continue
-        except RateLimitError as e:
-            print(f"[{e.provider}] 触发频率限制，切换到下一个引擎...")
-            continue
-        except Exception as e:
-            print(f"[{provider_name}] 调用失败: {e}，切换到下一个引擎...")
-            continue
-
-    # 两个都失败，等30秒后用 Groq 再试一次
-    print("[AI分析] 两个引擎都失败，等待30秒后用Groq重试...")
-    time.sleep(30)
-    try:
-        raw = _call_groq(prompt)
-        if raw:
-            return _parse_json(raw)
-    except Exception as e:
-        print(f"[AI分析] 最终重试失败: {e}")
+    time.sleep(5)
+    raw = _call_deepseek(prompt)
+    if raw:
+        return _parse_json(raw)
 
     return None
 
