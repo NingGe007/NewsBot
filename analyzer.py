@@ -92,7 +92,11 @@ def analyze_article(title: str, source: str, content: str) -> dict | None:
 
 
 def should_push(analysis: dict) -> bool:
-    return True  # 临时：所有文章都推送，用于测试飞书通道
+    score = analysis.get("score", 5)
+    impact = analysis.get("impact_level", 1)
+    if impact < 2:
+        return False
+    return (1 <= score <= 4) or (7 <= score <= 10)
 
 
 def format_score_emoji(score: int) -> str:
