@@ -53,7 +53,7 @@ jobs:
           HOUR=$(date -u +%H)
           if [ -n "${{ github.event.inputs.report_type }}" ]; then
             python daily_report.py "${{ github.event.inputs.report_type }}"
-          elif [ "$HOUR" = "17" ] || [ "$HOUR" = "18" ]; then
+          elif [ "$HOUR" -ge 19 ] || [ "$HOUR" -le 4 ]; then
             python daily_report.py 早报
           else
             python daily_report.py 晚报
