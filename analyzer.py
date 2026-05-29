@@ -92,11 +92,7 @@ def analyze_article(title: str, source: str, content: str) -> dict | None:
 
 
 def should_push(analysis: dict) -> bool:
-    score = analysis.get("score", 5)
-    impact = analysis.get("impact_level", 1)
-    if impact < 2:
-        return False
-    return (1 <= score <= 4) or (7 <= score <= 10)
+    return True  # DEBUG: 临时全部推送，测试完改回
 
 
 def build_push_message(article: dict, analysis: dict) -> str:
