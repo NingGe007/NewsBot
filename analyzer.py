@@ -124,7 +124,8 @@ def build_push_message(article: dict, analysis: dict) -> str:
         related_lines.append(f"📂 板块：{' / '.join(sectors)}")
     if tickers or etfs:
         stocks = [f"${t}" for t in tickers] + [f"${e}" for e in etfs]
-        related_lines.append(f"└ 标的：\n{' '.join(stocks)}")
+        related_lines.append(f"└ 标的：")
+        related_lines.append(f"{' '.join(stocks)}")
     if commodities:
         related_lines.append(f"📦 商品：{' / '.join(commodities)}")
 
@@ -132,7 +133,7 @@ def build_push_message(article: dict, analysis: dict) -> str:
     parts.append(f"{bar}")
     parts.append(f"**{reason}**")
     if related_lines:
-        parts.append("\n".join(related_lines))
+        parts.append("\n\n".join(related_lines))
     parts.append(f"**来源：** {article.get('source', '未知')}")
     parts.append(f"**原文：**\n{article.get('title', '')}")
     if article.get("url"):
