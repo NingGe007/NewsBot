@@ -95,18 +95,23 @@ def should_push(analysis: dict) -> bool:
     return True  # DEBUG: 临时全部推送，测试完改回
 
 
-def _score_bar(score: int) -> str:
-    filled = "█" * score
-    empty = "░" * (10 - score)
-    return f"`{filled}{empty}` {score}/10"
+def _score_bar(score: int, bullish: bool) -> str:
+    if bullish:
+        filled = "🟥" * score
+        empty = "⬜" * (10 - score)
+    else:
+        filled = "🟩" * score
+        empty = "⬜" * (10 - score)
+    return f"{filled}{empty} {score}/10"
 
 
 def build_push_message(article: dict, analysis: dict) -> str:
     score = analysis["score"]
     reason = analysis["reason"]
+    bullish = score >= 7
 
-    # 进度条
-    bar = _score_bar(score)
+    # 进度条（红涨绿跌）
+    bar = _score_bar(score, bullish)
 
     # 相关标的
     targets = []
@@ -122,10 +127,10 @@ def build_push_message(article: dict, analysis: dict) -> str:
     targets_str = " ".join(targets) if targets else ""
 
     parts = []
-    parts.append(f"**强度：** {bar}")
+    parts.append(f"**{reason}**")
+    parts.append(f"**强度：**\n{bar}")
     if targets_str:
         parts.append(f"**相关：** {targets_str}")
-    parts.append(f"**解读：** {reason}")
     parts.append(f"**来源：** {article.get('source', '未知')}")
     parts.append(f"**原文：**\n{article.get('title', '')}")
     if article.get("url"):

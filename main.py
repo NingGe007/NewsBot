@@ -86,12 +86,11 @@ def run():
 
         if should_push(analysis):
             message = build_push_message(article, analysis)
-            # 中国股市惯例：红涨绿跌
-            reason_short = analysis["reason"][:20]
+            # 中国股市惯例：红涨绿跌，标题只显示方向和评分
             if score >= 7:
-                title = f"🔴 看涨 {score}/10 · {reason_short}"
+                title = f"🔴 看涨 {score}/10"
             else:
-                title = f"🟢 看跌 {score}/10 · {reason_short}"
+                title = f"🟢 看跌 {score}/10"
 
             success = send_news_alert(title, message)
             if success:
