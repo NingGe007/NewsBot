@@ -149,9 +149,11 @@ def _send_combined_push(items):
             bar = "🟥" * level + "⬜" * (5 - level) if bullish else "🟩" * level + "⬜" * (5 - level)
 
             section_lines.append(f"**{direction_cn} {level}/5** {bar}")
+            section_lines.append(f"")
             section_lines.append(f"{a['reason']}")
+            section_lines.append(f"")
 
-            # 相关标的
+            # 影响标的
             targets = []
             for t in a.get("tickers", []):
                 targets.append(f"${t}")
@@ -160,9 +162,10 @@ def _send_combined_push(items):
             for e in a.get("etfs", []):
                 targets.append(f"${e}")
             if targets:
-                section_lines.append(f"标的：{' '.join(targets)}")
+                section_lines.append(f"影响：{' '.join(targets)}")
+                section_lines.append(f"")
 
-            section_lines.append(f"来源：{article.get('source', '')} | [原文]({article.get('url', '')})")
+            section_lines.append(f"<sub>来源：{article.get('source', '')} | <a href=\"{article.get('url', '')}\">原文</a></sub>")
             section_lines.append("---")
 
         sections.append("\n".join(section_lines))
