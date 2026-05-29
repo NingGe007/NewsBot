@@ -13,7 +13,7 @@ client = OpenAI(
     base_url="https://api.deepseek.com"
 )
 
-ANALYSIS_PROMPT = """你是一位专业美股投资分析师。请分析以下金融新闻，判断其对美股市场的影响。
+ANALYSIS_PROMPT = """你是一个帮我盯美股新闻的老哥们。看看下面这条新闻，帮我判断一下对美股有啥影响。
 
 新闻标题：{title}
 新闻来源：{source}
@@ -22,14 +22,14 @@ ANALYSIS_PROMPT = """你是一位专业美股投资分析师。请分析以下�
 请严格按以下JSON格式返回（只返回JSON，不要加任何解释或代码块）：
 
 {{
-  "score": <1到10的整数，1=极度看跌，5=中性/噪音，10=极度看涨>,
+  "score": <1到10的整数，1=极度看跌，5=没啥影响，10=极度看涨>,
   "direction": "<bullish 或 bearish 或 neutral>",
   "tickers": ["<相关股票代码，如AAPL>"],
   "sectors": ["<相关板块，用中文，如半导体>"],
   "etfs": ["<相关ETF代码，如QQQ>"],
   "commodities": ["<相关大宗商品，用中文，如原油>"],
-  "reason": "<用中文写1-2句直白解读，说清楚为什么看涨/看跌>",
-  "impact_level": <1到5的整数，1=影响极小，5=影响极大>
+  "reason": "<用中文写1-2句大白话解读，就像跟哥们说'这事儿意味着xxx'>",
+  "impact_level": <1到5的整数，1=屁事没有，5=大事件>
 }}
 
 注意：必须返回完整JSON，tickers/sectors/etfs/commodities 无关就返回 []"""
@@ -99,49 +99,29 @@ def should_push(analysis: dict) -> bool:
     return (1 <= score <= 4) or (7 <= score <= 10)
 
 
-def format_score_emoji(score: int) -> str:
-    if score >= 8:
-        return "🟢🟢"
-    elif score >= 7:
-        return "🟢"
-    elif score <= 2:
-        return "🔴🔴"
-    elif score <= 4:
-        return "🔴"
-    else:
-        return "⚪"
-
-
-def format_impact_stars(level: int) -> str:
-    return {1: "★☆☆☆☆", 2: "★★☆☆☆", 3: "★★★☆☆", 4: "★★★★☆", 5: "★★★★★"}.get(level, "★☆☆☆☆")
-
-
 def build_push_message(article: dict, analysis: dict) -> str:
     score = analysis["score"]
-    direction_text = "看涨" if score >= 7 else "看跌"
-    emoji = format_score_emoji(score)
-    stars = format_impact_stars(analysis["impact_level"])
+    reason = analysis["reason"]
 
     targets = []
     for ticker in analysis.get("tickers", []):
         targets.append(f"${ticker}")
     for sector in analysis.get("sectors", []):
-        targets.append(f"[{sector}板块]")
+        targets.append(f"[{sector}]")
     for etf in analysis.get("etfs", []):
         targets.append(f"${etf}")
     for commodity in analysis.get("commodities", []):
         targets.append(f"[{commodity}]")
 
-    targets_str = "  ".join(targets) if targets else "宏观市场"
+    targets_str = " ".join(targets) if targets else ""
 
-    return "\n".join([
-        f"{emoji} **{direction_text}** · 评分 {score}/10 · 影响力 {stars}",
-        f"",
-        f"📌 {targets_str}",
-        f"📰 来源：{article.get('source', '未知')}",
-        f"标题：{article.get('title', '')}",
-        f"",
-        f"💡 {analysis['reason']}",
-        f"",
-        f"🔗 {article.get('url', '')}",
-    ])
+    parts = []
+    if targets_str:
+        parts.append(f"**相关：** {targets_str}")
+    parts.append(f"**解读：** {reason}")
+    parts.append(f"**来源：** {article.get('source', '未知')}")
+    parts.append(f"**原文：** {article.get('title', '')}")
+    if article.get("url"):
+        parts.append(f"[查看原文]({article['url']})")
+
+    return "\n\n".join(parts)

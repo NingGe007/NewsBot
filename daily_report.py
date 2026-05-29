@@ -110,6 +110,9 @@ REPORT_PROMPT = """你是我的一个炒美股的老哥们，每天帮我盯盘�
 市场头条：
 {market_headlines}
 
+今日被过滤的文章分析（帮我扫一眼有没有值得关注的）：
+{filtered_records}
+
 格式大概这样（不用完全一样，自然就行）：
 
 📊 三大指数：（一句话说涨跌）
@@ -122,6 +125,9 @@ REPORT_PROMPT = """你是我的一个炒美股的老哥们，每天帮我盯盘�
 
 📌 明天注意：
 - （有啥要关注的提前说一嘴）
+
+📋 过滤池里捞出来的：
+- （如果被过滤的文章里有值得注意的，列1-3条。如果都是垃圾就不用提这个板块）
 
 ⚠️ 纯聊天不构成投资建议，亏了别找我哈
 
@@ -144,21 +150,35 @@ def generate_report(report_type: str) -> str:
     print(f"[{report_type}] 指数: {indices_str}")
 
     records = load_today_pushed()
-    if records:
-        records_summary = []
-        for r in records:
-            targets = []
-            targets.extend([f"${t}" for t in r.get("tickers", [])])
-            targets.extend([f"[{s}板块]" for s in r.get("sectors", [])])
-            targets.extend([f"${e}" for e in r.get("etfs", [])])
-            targets.extend([f"[{c}]" for c in r.get("commodities", [])])
-            direction = "看涨" if r["score"] >= 7 else "看跌"
-            records_summary.append(
-                f"{direction} | {' '.join(targets) or '宏观'} | {r['reason']} (来源:{r['source']})"
-            )
-        pushed_str = "\n".join(records_summary)
-    else:
-        pushed_str = "今日暂无推送记录"
+    pushed_items = []
+    filtered_items = []
+    for r in records:
+        targets = []
+        targets.extend([f"${t}" for t in r.get("tickers", [])])
+        targets.extend([f"[{s}板块]" for s in r.get("sectors", [])])
+        targets.extend([f"${e}" for e in r.get("etfs", [])])
+        targets.extend([f"[{c}]" for c in r.get("commodities", [])])
+        direction = "看涨" if r["score"] >= 7 else ("看跌" if r["score"] <= 4 else "中性")
+        line = f"{direction} | 评分{r['score']}/10 | {' '.join(targets) or '宏观'} | {r['reason']} (来源:{r['source']})"
+
+        score = r.get("score", 5)
+        impact = r.get("impact_level", 1)
+        if (impact >= 2) and ((1 <= score <= 4) or (7 <= score <= 10)):
+            pushed_items.append((score, line))
+        else:
+            filtered_items.append((score, line))
+
+    # 排序：看涨的从高到低排前面，看跌的从低到高排后面
+    bullish = sorted([x for x in pushed_items if x[0] >= 7], key=lambda x: -x[0])
+    bearish = sorted([x for x in pushed_items if x[0] <= 4], key=lambda x: x[0])
+    pushed_sorted = [x[1] for x in bullish] + [x[1] for x in bearish]
+    pushed_str = "\n".join(pushed_sorted) if pushed_sorted else "今日暂无实时推送"
+
+    # 过滤池同样排序
+    filtered_bullish = sorted([x for x in filtered_items if x[0] >= 6], key=lambda x: -x[0])
+    filtered_bearish = sorted([x for x in filtered_items if x[0] <= 5], key=lambda x: x[0])
+    filtered_sorted = [x[1] for x in filtered_bullish] + [x[1] for x in filtered_bearish]
+    filtered_str = "\n".join(filtered_sorted) if filtered_sorted else "今日无过滤文章"
 
     print(f"[{report_type}] 抓取市场头条...")
     headlines = fetch_market_headlines(hours=14)
@@ -168,9 +188,9 @@ def generate_report(report_type: str) -> str:
     prompt = REPORT_PROMPT.format(
         report_type=report_type,
         indices=indices_str,
-        indices_bullet=indices_str,
         pushed_records=pushed_str,
         market_headlines=headlines_str,
+        filtered_records=filtered_str,
     )
 
     try:

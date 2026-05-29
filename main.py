@@ -7,13 +7,12 @@ import os
 from datetime import datetime
 
 from scraper import get_latest_articles, fetch_article_content
-from analyzer import analyze_article, should_push, format_score_emoji, build_push_message
+from analyzer import analyze_article, should_push, build_push_message
 from feishu import send_news_alert
 from state import load_seen_ids, save_seen_ids, add_today_pushed
 
 
 def ensure_state_files():
-    """确保状态文件存在"""
     if not os.path.exists("today_pushed.json"):
         with open("today_pushed.json", "w") as f:
             f.write("[]")
@@ -27,7 +26,6 @@ def run():
     print(f"[运行时间] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*50}")
 
-    # 确保状态文件存在
     ensure_state_files()
 
     seen_ids = load_seen_ids()
@@ -83,21 +81,20 @@ def run():
         impact = analysis["impact_level"]
         print(f"       评分: {score}/10  影响力: {impact}/5")
 
+        # 所有分析结果都记录，供日报汇总
+        add_today_pushed(article, analysis)
+
         if should_push(analysis):
             message = build_push_message(article, analysis)
-            emoji = format_score_emoji(score)
             if score >= 7:
-                color = "green"
-                header = f"{emoji} 看涨信号 · 评分 {score}/10"
+                title = f"🟢 看涨 {score}/10 · {article['title'][:30]}"
             else:
-                color = "red"
-                header = f"{emoji} 看跌信号 · 评分 {score}/10"
+                title = f"🔴 看跌 {score}/10 · {article['title'][:30]}"
 
-            success = send_news_alert(header, message, color)
+            success = send_news_alert(title, message)
             if success:
                 pushed_count += 1
                 print(f"       已推送到飞书")
-                add_today_pushed(article, analysis)
             else:
                 print(f"       推送飞书失败")
         else:
