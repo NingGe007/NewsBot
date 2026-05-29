@@ -13,10 +13,11 @@ client = OpenAI(
     base_url="https://api.deepseek.com"
 )
 
-ANALYSIS_PROMPT = """你是一个帮我盯美股新闻的老哥们。看看下面这条新闻，帮我判断一下对美股有啥影响。
+ANALYSIS_PROMPT = """你是一个帮我盯股票新闻的老哥们，美股、A股、港股都看。看看下面这条新闻，帮我判断一下对相关市场有啥影响。
 
 新闻标题：{title}
 新闻来源：{source}
+所属市场：{market}
 新闻内容摘要：{content}
 
 请严格按以下JSON格式返回（只返回JSON，不要加任何解释或代码块）：
@@ -67,10 +68,11 @@ def _call_deepseek(prompt: str) -> str | None:
         return None
 
 
-def analyze_article(title: str, source: str, content: str) -> dict | None:
+def analyze_article(title: str, source: str, content: str, market: str = "美股") -> dict | None:
     prompt = ANALYSIS_PROMPT.format(
         title=title,
         source=source,
+        market=market,
         content=content[:2000] if content else "（无正文摘要）"
     )
 

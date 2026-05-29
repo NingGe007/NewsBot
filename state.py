@@ -55,6 +55,7 @@ def add_today_pushed(article: dict, analysis: dict):
         "title": article.get("title", ""),
         "url": article.get("url", ""),
         "source": article.get("source", ""),
+        "market": article.get("market", "美股"),
         "direction": analysis.get("direction", "neutral"),
         "level": analysis.get("level", 1),
         "tickers": analysis.get("tickers", []),

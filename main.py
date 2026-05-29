@@ -66,10 +66,12 @@ def run():
             print(f"       摘要太短，抓取正文...")
             content = fetch_article_content(article["url"])
 
+        market = article.get("market", "美股")
         analysis = analyze_article(
             title=article["title"],
             source=article.get("source", ""),
-            content=content
+            content=content,
+            market=market
         )
 
         if not analysis:
@@ -87,15 +89,15 @@ def run():
 
         if should_push(analysis):
             message = build_push_message(article, analysis)
-            # 中国股市惯例：红涨绿跌
+            # 标题：市场 + 方向 + 程度
             if direction == "bullish":
-                title = f"🔴 看涨 {level}/5"
+                push_title = f"🔴【{market}】看涨 {level}/5"
             elif direction == "bearish":
-                title = f"🟢 看跌 {level}/5"
+                push_title = f"🟢【{market}】看跌 {level}/5"
             else:
-                title = f"⚪ 中性 {level}/5"
+                push_title = f"⚪【{market}】中性 {level}/5"
 
-            success = send_news_alert(title, message)
+            success = send_news_alert(push_title, message)
             if success:
                 pushed_count += 1
                 print(f"       已推送到飞书")

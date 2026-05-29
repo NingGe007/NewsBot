@@ -22,23 +22,57 @@ SEC_HEADERS = {
     "Host": "www.sec.gov",
 }
 
-# ── 监控来源：只保留 Reuters、SEC Filing、Earnings ────────────
+# ── 监控来源：美股 + A股 + 港股 ────────────
 RSS_FEEDS = [
-    # SEC 重大事件公告（8-K 包含 earnings、重大交易、FDA结果等）
+    # ─── 美股 ───
     {
         "source": "SEC Filing",
+        "market": "美股",
         "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&dateb=&owner=include&count=40&search_text=&output=atom",
         "headers": SEC_HEADERS,
     },
-    # Reuters 财经 & 市场
     {
         "source": "Reuters",
+        "market": "美股",
         "url": "https://news.google.com/rss/search?q=site:reuters.com+earnings+OR+results+OR+profit+OR+revenue&hl=en-US&gl=US&ceid=US:en",
         "headers": HEADERS,
     },
     {
         "source": "Reuters",
+        "market": "美股",
         "url": "https://news.google.com/rss/search?q=site:reuters.com+stocks+OR+markets+OR+fed+OR+rates&hl=en-US&gl=US&ceid=US:en",
+        "headers": HEADERS,
+    },
+    # ─── A股 ───
+    {
+        "source": "新浪财经",
+        "market": "A股",
+        "url": "https://news.google.com/rss/search?q=A%E8%82%A1+OR+%E6%B2%AA%E6%8C%87+OR+%E6%B7%B1%E6%8C%87+OR+%E5%88%9B%E4%B8%9A%E6%9D%BF&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+        "headers": HEADERS,
+    },
+    {
+        "source": "财联社",
+        "market": "A股",
+        "url": "https://news.google.com/rss/search?q=site:cls.cn+%E8%82%A1%E7%A5%A8+OR+%E6%B6%A8%E5%81%9C+OR+%E8%B7%8C%E5%81%9C+OR+%E5%88%A9%E5%A5%BD+OR+%E5%88%A9%E7%A9%BA&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+        "headers": HEADERS,
+    },
+    {
+        "source": "东方财富",
+        "market": "A股",
+        "url": "https://news.google.com/rss/search?q=site:eastmoney.com+%E8%82%A1%E7%A5%A8+OR+%E5%A4%A7%E7%9B%98+OR+%E6%9D%BF%E5%9D%97+OR+%E8%B5%84%E9%87%91%E6%B5%81&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+        "headers": HEADERS,
+    },
+    # ─── 港股 ───
+    {
+        "source": "港股资讯",
+        "market": "港股",
+        "url": "https://news.google.com/rss/search?q=%E6%B8%AF%E8%82%A1+OR+%E6%81%92%E6%8C%87+OR+%E7%A7%91%E6%8A%80%E6%8C%87%E6%95%B0+OR+%E5%8D%97%E4%B8%8B%E8%B5%84%E9%87%91&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+        "headers": HEADERS,
+    },
+    {
+        "source": "SCMP",
+        "market": "港股",
+        "url": "https://news.google.com/rss/search?q=site:scmp.com+Hong+Kong+stocks+OR+Hang+Seng+OR+HK+market&hl=en&gl=HK&ceid=HK:en",
         "headers": HEADERS,
     },
 ]
@@ -140,6 +174,7 @@ def fetch_rss(feed):
                 "title": title.strip(),
                 "url": link.strip(),
                 "source": source,
+                "market": feed.get("market", "美股"),
                 "published_at": published_at,
                 "summary": summary,
             })
