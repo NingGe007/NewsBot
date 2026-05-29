@@ -56,6 +56,7 @@ def run():
 
     pushed_count = 0
     skipped_count = 0
+    push_items = []
 
     for article in new_articles:
         print(f"\n[分析] {article['title'][:60]}...")
@@ -88,21 +89,16 @@ def run():
         add_today_pushed(article, analysis)
 
         if should_push(analysis):
-            message = build_push_message(article, analysis)
-            # 标题：市场 + 方向 + 程度
-            if direction == "bullish":
-                push_title = f"🔴【{market}】看涨 {level}/5"
-            elif direction == "bearish":
-                push_title = f"🟢【{market}】看跌 {level}/5"
-            else:
-                push_title = f"⚪【{market}】中性 {level}/5"
-
-            success = send_news_alert(push_title, message)
-            if success:
-                pushed_count += 1
-                print(f"       已推送到飞书")
-            else:
-                print(f"       推送飞书失败")
+            push_items.append({
+                "article": article,
+                "analysis": analysis,
+                "market": market,
+                "direction": direction,
+                "direction_cn": direction_cn,
+                "level": level,
+            })
+            pushed_count += 1
+            print(f"       待推送")
         else:
             skipped_count += 1
             print(f"       [过滤] {direction_cn} {level}/5，不够重要")
@@ -112,7 +108,74 @@ def run():
 
     save_seen_ids(seen_ids)
 
+    # 合并推送：所有值得推的文章整合成一条消息
+    if push_items:
+        _send_combined_push(push_items)
+
     print(f"\n[完成] 推送 {pushed_count} 条，过滤噪音 {skipped_count} 条\n")
+
+
+def _send_combined_push(items):
+    # 按市场分组，每个市场内按程度排序
+    from collections import defaultdict
+    by_market = defaultdict(list)
+    for item in items:
+        by_market[item["market"]].append(item)
+
+    # 统计标题
+    bullish_count = sum(1 for i in items if i["direction"] == "bullish")
+    bearish_count = sum(1 for i in items if i["direction"] == "bearish")
+    title_parts = []
+    if bullish_count:
+        title_parts.append(f"🔴{bullish_count}涨")
+    if bearish_count:
+        title_parts.append(f"🟢{bearish_count}跌")
+    title = f"📡 新信号 {' '.join(title_parts)}｜共{len(items)}条"
+
+    # 构建正文
+    sections = []
+    market_order = ["美股", "A股", "港股"]
+    for market in market_order:
+        if market not in by_market:
+            continue
+        market_items = sorted(by_market[market], key=lambda x: -x["level"])
+        section_lines = [f"## 【{market}】"]
+        for item in market_items:
+            a = item["analysis"]
+            article = item["article"]
+            level = item["level"]
+            direction_cn = item["direction_cn"]
+            bullish = item["direction"] == "bullish"
+            bar = "🟥" * level + "⬜" * (5 - level) if bullish else "🟩" * level + "⬜" * (5 - level)
+
+            section_lines.append(f"**{direction_cn} {level}/5** {bar}")
+            section_lines.append(f"{a['reason']}")
+
+            # 相关标的
+            targets = []
+            for t in a.get("tickers", []):
+                targets.append(f"${t}")
+            for s in a.get("sectors", []):
+                targets.append(f"[{s}]")
+            for e in a.get("etfs", []):
+                targets.append(f"${e}")
+            if targets:
+                section_lines.append(f"标的：{' '.join(targets)}")
+
+            section_lines.append(f"来源：{article.get('source', '')} | [原文]({article.get('url', '')})")
+            section_lines.append("---")
+
+        sections.append("\n".join(section_lines))
+
+    body = "\n\n".join(sections)
+    now = datetime.now().strftime("%H:%M")
+    body = f"⏰ {now} 扫描结果\n\n{body}"
+
+    success = send_news_alert(title, body)
+    if success:
+        print(f"[推送] 合并推送成功：{len(items)} 条信号")
+    else:
+        print(f"[推送] 合并推送失败")
 
 
 if __name__ == "__main__":
