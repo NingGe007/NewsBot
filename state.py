@@ -55,14 +55,13 @@ def add_today_pushed(article: dict, analysis: dict):
         "title": article.get("title", ""),
         "url": article.get("url", ""),
         "source": article.get("source", ""),
-        "score": analysis.get("score", 5),
         "direction": analysis.get("direction", "neutral"),
+        "level": analysis.get("level", 1),
         "tickers": analysis.get("tickers", []),
         "sectors": analysis.get("sectors", []),
         "etfs": analysis.get("etfs", []),
         "commodities": analysis.get("commodities", []),
         "reason": analysis.get("reason", ""),
-        "impact_level": analysis.get("impact_level", 1),
     })
     save_today_pushed(records)
 

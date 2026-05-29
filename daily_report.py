@@ -158,27 +158,25 @@ def generate_report(report_type: str) -> str:
         targets.extend([f"[{s}板块]" for s in r.get("sectors", [])])
         targets.extend([f"${e}" for e in r.get("etfs", [])])
         targets.extend([f"[{c}]" for c in r.get("commodities", [])])
-        direction = "看涨" if r["score"] >= 7 else ("看跌" if r["score"] <= 4 else "中性")
-        line = f"{direction} | 评分{r['score']}/10 | {' '.join(targets) or '宏观'} | {r['reason']} (来源:{r['source']})"
+        direction = r.get("direction", "neutral")
+        direction_cn = "看涨" if direction == "bullish" else ("看跌" if direction == "bearish" else "中性")
+        level = r.get("level", 1)
+        line = f"{direction_cn} | 程度{level}/5 | {' '.join(targets) or '宏观'} | {r['reason']} (来源:{r['source']})"
 
-        score = r.get("score", 5)
-        impact = r.get("impact_level", 1)
-        if (impact >= 2) and ((1 <= score <= 4) or (7 <= score <= 10)):
-            pushed_items.append((score, line))
+        if direction != "neutral" and level >= 2:
+            pushed_items.append((level, direction, line))
         else:
-            filtered_items.append((score, line))
+            filtered_items.append((level, direction, line))
 
-    # 排序：看涨的从高到低排前面，看跌的从低到高排后面
-    bullish = sorted([x for x in pushed_items if x[0] >= 7], key=lambda x: -x[0])
-    bearish = sorted([x for x in pushed_items if x[0] <= 4], key=lambda x: x[0])
-    pushed_sorted = [x[1] for x in bullish] + [x[1] for x in bearish]
+    # 排序：看涨的按程度从高到低排前面，看跌的按程度从高到低排后面
+    bullish = sorted([x for x in pushed_items if x[1] == "bullish"], key=lambda x: -x[0])
+    bearish = sorted([x for x in pushed_items if x[1] == "bearish"], key=lambda x: -x[0])
+    pushed_sorted = [x[2] for x in bullish] + [x[2] for x in bearish]
     pushed_str = "\n".join(pushed_sorted) if pushed_sorted else "今日暂无实时推送"
 
     # 过滤池同样排序
-    filtered_bullish = sorted([x for x in filtered_items if x[0] >= 6], key=lambda x: -x[0])
-    filtered_bearish = sorted([x for x in filtered_items if x[0] <= 5], key=lambda x: x[0])
-    filtered_sorted = [x[1] for x in filtered_bullish] + [x[1] for x in filtered_bearish]
-    filtered_str = "\n".join(filtered_sorted) if filtered_sorted else "今日无过滤文章"
+    filtered_sorted = sorted(filtered_items, key=lambda x: -x[0])
+    filtered_str = "\n".join([x[2] for x in filtered_sorted]) if filtered_sorted else "今日无过滤文章"
 
     print(f"[{report_type}] 抓取市场头条...")
     headlines = fetch_market_headlines(hours=14)

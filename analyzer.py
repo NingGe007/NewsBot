@@ -22,14 +22,13 @@ ANALYSIS_PROMPT = """你是一个帮我盯美股新闻的老哥们。看看下�
 请严格按以下JSON格式返回（只返回JSON，不要加任何解释或代码块）：
 
 {{
-  "score": <1到10的整数，1=极度看跌，5=没啥影响，10=极度看涨>,
   "direction": "<bullish 或 bearish 或 neutral>",
+  "level": <1到5的整数，影响程度：1=很轻微，2=有点影响，3=中等影响，4=影响很大，5=重大事件>,
   "tickers": ["<相关股票代码，如AAPL>"],
   "sectors": ["<相关板块，用中文，如半导体>"],
   "etfs": ["<相关ETF代码，如QQQ>"],
   "commodities": ["<相关大宗商品，用中文，如原油>"],
-  "reason": "<用中文写1-2句大白话解读，就像跟哥们说'这事儿意味着xxx'>",
-  "impact_level": <1到5的整数，1=屁事没有，5=大事件>
+  "reason": "<用中文写1-2句大白话解读，就像跟哥们说'这事儿意味着xxx'>"
 }}
 
 注意：必须返回完整JSON，tickers/sectors/etfs/commodities 无关就返回 []"""
@@ -41,11 +40,10 @@ def _parse_json(raw: str) -> dict | None:
     raw = raw.strip()
     try:
         result = json.loads(raw)
-        for field in ["score", "direction", "reason", "impact_level"]:
+        for field in ["direction", "reason", "level"]:
             if field not in result:
                 return None
-        result["score"] = int(result["score"])
-        result["impact_level"] = int(result["impact_level"])
+        result["level"] = max(1, min(5, int(result["level"])))
         result["tickers"] = result.get("tickers", [])
         result["sectors"] = result.get("sectors", [])
         result["etfs"] = result.get("etfs", [])
@@ -93,25 +91,32 @@ def analyze_article(title: str, source: str, content: str) -> dict | None:
 
 def should_push(analysis: dict) -> bool:
     return True  # DEBUG: 临时全部推送，测试完改回
+    # 正式逻辑：level >= 2 且非中性才推送
+    # direction = analysis.get("direction", "neutral")
+    # level = analysis.get("level", 1)
+    # if direction == "neutral":
+    #     return False
+    # return level >= 2
 
 
-def _score_bar(score: int, bullish: bool) -> str:
+def _level_bar(level: int, bullish: bool) -> str:
     if bullish:
-        filled = "🟥" * score
-        empty = "⬜" * (10 - score)
+        filled = "🟥" * level
+        empty = "⬜" * (5 - level)
     else:
-        filled = "🟩" * score
-        empty = "⬜" * (10 - score)
-    return f"{filled}{empty} {score}/10"
+        filled = "🟩" * level
+        empty = "⬜" * (5 - level)
+    return f"{filled}{empty} {level}/5"
 
 
 def build_push_message(article: dict, analysis: dict) -> str:
-    score = analysis["score"]
+    level = analysis["level"]
     reason = analysis["reason"]
-    bullish = score >= 7
+    direction = analysis["direction"]
+    bullish = direction == "bullish"
 
     # 进度条（红涨绿跌）
-    bar = _score_bar(score, bullish)
+    bar = _level_bar(level, bullish)
 
     # 相关标的（分层显示：板块 > 个股/ETF > 大宗商品）
     sectors = analysis.get("sectors", [])

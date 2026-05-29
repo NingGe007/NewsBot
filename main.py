@@ -77,20 +77,23 @@ def run():
             seen_ids.add(article["id"])
             continue
 
-        score = analysis["score"]
-        impact = analysis["impact_level"]
-        print(f"       评分: {score}/10  影响力: {impact}/5")
+        level = analysis["level"]
+        direction = analysis["direction"]
+        direction_cn = "看涨" if direction == "bullish" else ("看跌" if direction == "bearish" else "中性")
+        print(f"       方向: {direction_cn}  程度: {level}/5")
 
         # 所有分析结果都记录，供日报汇总
         add_today_pushed(article, analysis)
 
         if should_push(analysis):
             message = build_push_message(article, analysis)
-            # 中国股市惯例：红涨绿跌，标题只显示方向和评分
-            if score >= 7:
-                title = f"🔴 看涨 {score}/10"
+            # 中国股市惯例：红涨绿跌
+            if direction == "bullish":
+                title = f"🔴 看涨 {level}/5"
+            elif direction == "bearish":
+                title = f"🟢 看跌 {level}/5"
             else:
-                title = f"🟢 看跌 {score}/10"
+                title = f"⚪ 中性 {level}/5"
 
             success = send_news_alert(title, message)
             if success:
