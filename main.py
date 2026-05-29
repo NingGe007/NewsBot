@@ -165,7 +165,9 @@ def _send_combined_push(items):
                 section_lines.append(f"**影响：** {' '.join(targets)}")
                 section_lines.append(f"")
 
-            section_lines.append(f"--- {article.get('source', '')} ---")
+            section_lines.append(f"")
+            section_lines.append(f"---")
+            section_lines.append(f"")
 
         sections.append("\n".join(section_lines))
 
