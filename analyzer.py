@@ -113,24 +113,26 @@ def build_push_message(article: dict, analysis: dict) -> str:
     # 进度条（红涨绿跌）
     bar = _score_bar(score, bullish)
 
-    # 相关标的
-    targets = []
-    for ticker in analysis.get("tickers", []):
-        targets.append(f"${ticker}")
-    for sector in analysis.get("sectors", []):
-        targets.append(f"[{sector}]")
-    for etf in analysis.get("etfs", []):
-        targets.append(f"${etf}")
-    for commodity in analysis.get("commodities", []):
-        targets.append(f"[{commodity}]")
+    # 相关标的（分层显示：板块 > 个股/ETF > 大宗商品）
+    sectors = analysis.get("sectors", [])
+    tickers = analysis.get("tickers", [])
+    etfs = analysis.get("etfs", [])
+    commodities = analysis.get("commodities", [])
 
-    targets_str = " ".join(targets) if targets else ""
+    related_lines = []
+    if sectors:
+        related_lines.append(f"📂 板块：{' / '.join(sectors)}")
+    if tickers or etfs:
+        stocks = [f"${t}" for t in tickers] + [f"${e}" for e in etfs]
+        related_lines.append(f"  └ 标的：{' '.join(stocks)}")
+    if commodities:
+        related_lines.append(f"📦 商品：{' / '.join(commodities)}")
 
     parts = []
     parts.append(f"{bar}")
     parts.append(f"**{reason}**")
-    if targets_str:
-        parts.append(f"**相关：** {targets_str}")
+    if related_lines:
+        parts.append("\n".join(related_lines))
     parts.append(f"**来源：** {article.get('source', '未知')}")
     parts.append(f"**原文：**\n{article.get('title', '')}")
     if article.get("url"):
