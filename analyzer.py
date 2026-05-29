@@ -90,13 +90,11 @@ def analyze_article(title: str, source: str, content: str) -> dict | None:
 
 
 def should_push(analysis: dict) -> bool:
-    return True  # DEBUG: 临时全部推送，测试完改回
-    # 正式逻辑：level >= 2 且非中性才推送
-    # direction = analysis.get("direction", "neutral")
-    # level = analysis.get("level", 1)
-    # if direction == "neutral":
-    #     return False
-    # return level >= 2
+    direction = analysis.get("direction", "neutral")
+    level = analysis.get("level", 1)
+    if direction == "neutral":
+        return False
+    return level >= 2
 
 
 def _level_bar(level: int, bullish: bool) -> str:
