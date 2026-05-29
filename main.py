@@ -158,11 +158,11 @@ def _send_combined_push(items):
             for t in a.get("tickers", []):
                 targets.append(f"${t}")
             for s in a.get("sectors", []):
-                targets.append(f"[{s}]")
+                targets.append(f"「{s}」")
             for e in a.get("etfs", []):
                 targets.append(f"${e}")
             if targets:
-                section_lines.append(f"影响：{' '.join(targets)}")
+                section_lines.append(f"**影响：** {' '.join(targets)}")
                 section_lines.append(f"")
 
             section_lines.append(f"*（{article.get('source', '')}）*")
