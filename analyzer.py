@@ -124,7 +124,7 @@ def build_push_message(article: dict, analysis: dict) -> str:
         related_lines.append(f"📂 板块：{' / '.join(sectors)}")
     if tickers or etfs:
         stocks = [f"${t}" for t in tickers] + [f"${e}" for e in etfs]
-        related_lines.append(f"  └ 标的：{' '.join(stocks)}")
+        related_lines.append(f"└ 标的：\n{' '.join(stocks)}")
     if commodities:
         related_lines.append(f"📦 商品：{' / '.join(commodities)}")
 
