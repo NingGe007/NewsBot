@@ -103,7 +103,7 @@ def run():
                 print(f"       推送飞书失败")
         else:
             skipped_count += 1
-            print(f"       [过滤] 评分 {score}，市场噪音")
+            print(f"       [过滤] {direction_cn} {level}/5，不够重要")
 
         seen_ids.add(article["id"])
         time.sleep(1)
