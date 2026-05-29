@@ -127,8 +127,8 @@ def build_push_message(article: dict, analysis: dict) -> str:
     targets_str = " ".join(targets) if targets else ""
 
     parts = []
+    parts.append(f"{bar}")
     parts.append(f"**{reason}**")
-    parts.append(f"**强度：**\n{bar}")
     if targets_str:
         parts.append(f"**相关：** {targets_str}")
     parts.append(f"**来源：** {article.get('source', '未知')}")
