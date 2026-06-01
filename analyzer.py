@@ -13,7 +13,7 @@ client = OpenAI(
     base_url="https://api.deepseek.com"
 )
 
-ANALYSIS_PROMPT = """你是一个帮我盯股票新闻的老哥们，美股、A股、港股都看。看看下面这条新闻，帮我判断一下对相关市场有啥影响。
+ANALYSIS_PROMPT = """你是一位专业的投资分析师，覆盖美股、A股、港股三大市场。请分析以下新闻对相关市场的影响。
 
 新闻标题：{title}
 新闻来源：{source}
@@ -25,11 +25,11 @@ ANALYSIS_PROMPT = """你是一个帮我盯股票新闻的老哥们，美股、A�
 {{
   "direction": "<bullish 或 bearish 或 neutral>",
   "level": <1到5的整数，影响程度：1=很轻微，2=有点影响，3=中等影响，4=影响很大，5=重大事件>,
-  "tickers": ["<相关股票代码，如AAPL>"],
+  "tickers": ["<相关股票代码，如AAPL、600519.SH、0700.HK>"],
   "sectors": ["<相关板块，用中文，如半导体>"],
   "etfs": ["<相关ETF代码，如QQQ>"],
   "commodities": ["<相关大宗商品，用中文，如原油>"],
-  "reason": "<用中文写1-2句大白话解读，就像跟哥们说'这事儿意味着xxx'>"
+  "reason": "<用中文写1-2句专业简洁的解读，说明核心逻辑和影响路径>"
 }}
 
 注意：必须返回完整JSON，tickers/sectors/etfs/commodities 无关就返回 []"""
