@@ -29,11 +29,11 @@ ANALYSIS_PROMPT = """你是一个帮我盯盘的老哥们，覆盖美股、A股�
   "sectors": ["<相关板块，用中文，如半导体>"],
   "etfs": ["<相关ETF代码，如QQQ>"],
   "commodities": ["<相关大宗商品，用中文，如原油>"],
-  "reason": "<用中文写3-4句完整分析：① 这事儿是什么 ② 为什么影响市场（逻辑链）③ 具体利好/利空哪些标的 ④ 短期预期。像跟哥们掰开揉碎讲清楚一样>"
+  "reason": "<用中文写1句大白话总结，像发微信一样简短直白，例如'财报造假被揭，退市风险大，别碰'或'算力订单超预期，短期要冲新高'>"
 }}
 
 注意：
-- reason 要写清楚逻辑链，不要只写结论，要让人看了知道"为什么"
+- reason 要短！一句话讲清楚就行，别写长篇大论
 - 必须返回完整JSON，tickers/sectors/etfs/commodities 无关就返回 []"""
 
 
@@ -98,7 +98,7 @@ def should_push(analysis: dict) -> bool:
     level = analysis.get("level", 1)
     if direction == "neutral":
         return False
-    return level >= 2
+    return level >= 3
 
 
 def _level_bar(level: int, bullish: bool) -> str:

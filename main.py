@@ -121,8 +121,11 @@ def run():
 
 
 def _send_grouped_push(items, group_name):
-    """按市场分组合并推送"""
+    """按市场分组合并推送，精简格式"""
     from collections import defaultdict
+
+    # 只推 top 5，按 level 排序
+    items = sorted(items, key=lambda x: -x["level"])[:5]
 
     bullish_count = sum(1 for i in items if i["direction"] == "bullish")
     bearish_count = sum(1 for i in items if i["direction"] == "bearish")
@@ -131,53 +134,45 @@ def _send_grouped_push(items, group_name):
         title_parts.append(f"🔴{bullish_count}涨")
     if bearish_count:
         title_parts.append(f"🟢{bearish_count}跌")
-    title = f"📡 {group_name} {' '.join(title_parts)}｜共{len(items)}条"
+    title = f"📡 {group_name} {' '.join(title_parts)}"
 
-    # 按市场子分组（A股/港股分开展示）
+    # 按市场子分组
     by_market = defaultdict(list)
     for item in items:
         by_market[item["market"]].append(item)
 
-    sections = []
+    lines = []
     for market in ["A股", "港股", "美股"]:
         if market not in by_market:
             continue
         market_items = sorted(by_market[market], key=lambda x: -x["level"])
-        lines = [f"## 【{market}】"]
+        if len(by_market) > 1:
+            lines.append(f"**【{market}】**")
+
         for item in market_items:
             a = item["analysis"]
-            article = item["article"]
             level = item["level"]
             direction_cn = item["direction_cn"]
             bullish = item["direction"] == "bullish"
-            bar = "🟥" * level + "⬜" * (5 - level) if bullish else "🟩" * level + "⬜" * (5 - level)
+            icon = "🔴" if bullish else "🟢"
 
-            lines.append(f"**{direction_cn} {level}/5** {bar}")
-            lines.append(f"")
-            lines.append(f"{a['reason']}")
-            lines.append(f"")
-
+            # 标的
             targets = []
             for t in a.get("tickers", []):
                 targets.append(f"${t}")
-            for s in a.get("sectors", []):
-                targets.append(f"「{s}」")
             for e in a.get("etfs", []):
                 targets.append(f"${e}")
-            if targets:
-                lines.append(f"**影响：** {' '.join(targets)}")
-                lines.append(f"")
+            for s in a.get("sectors", []):
+                targets.append(f"「{s}」")
+            target_str = " ".join(targets) if targets else "宏观"
 
-            lines.append(f"（{article.get('source', '')}）")
-            lines.append(f"")
-            lines.append(f"---")
-            lines.append(f"")
+            # 一行搞定：图标 + 标的 + 程度 + 原因
+            lines.append(f"{icon} {target_str} {direction_cn}{level}/5")
+            lines.append(f"   {a['reason']}")
+            lines.append("")
 
-        sections.append("\n".join(lines))
-
-    body = "\n\n".join(sections)
     now = datetime.now().strftime("%H:%M")
-    body = f"⏰ {now} 扫描结果\n\n{body}"
+    body = f"⏰ {now}\n\n" + "\n".join(lines)
 
     success = send_news_alert(title, body)
     if success:
