@@ -62,7 +62,7 @@ def _call_deepseek(prompt: str) -> str | None:
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
-            max_tokens=800,
+            max_tokens=1000,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -70,10 +70,11 @@ def _call_deepseek(prompt: str) -> str | None:
         return None
 
 
-def analyze_article(title: str, source: str, content: str) -> dict | None:
+def analyze_article(title: str, source: str, content: str, market: str = "美股") -> dict | None:
     prompt = ANALYSIS_PROMPT.format(
         title=title,
         source=source,
+        market=market,
         content=content[:2000] if content else "（无正文摘要）"
     )
 
