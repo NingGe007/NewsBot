@@ -120,12 +120,56 @@ def run():
     print(f"\n[完成] 推送 {pushed_count} 条，过滤噪音 {skipped_count} 条\n")
 
 
+def _fetch_ticker_quote(symbol: str) -> str:
+    """查询单个股票当日涨跌，返回如 ↑3.52%"""
+    import requests
+    ticker = symbol.upper().strip()
+    # 转换为 Yahoo Finance 格式
+    if ticker.endswith(".SH"):
+        yahoo_sym = ticker.replace(".SH", ".SS")
+    elif ticker.endswith(".HK"):
+        num = ticker.replace(".HK", "").lstrip("0")
+        yahoo_sym = f"{int(num):04d}.HK"
+    else:
+        yahoo_sym = ticker
+
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_sym}?interval=1d&range=2d"
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        data = resp.json()
+        meta = data["chart"]["result"][0]["meta"]
+        price = meta.get("regularMarketPrice", 0)
+        prev_close = meta.get("chartPreviousClose", 0)
+        if prev_close and price:
+            pct = ((price - prev_close) / prev_close) * 100
+            arrow = "↑" if pct >= 0 else "↓"
+            return f"{arrow}{abs(pct):.2f}%"
+    except Exception:
+        pass
+    return ""
+
+
 def _send_grouped_push(items, group_name):
-    """按市场分组合并推送，精简格式"""
+    """按市场分组合并推送，精简格式，带个股涨跌"""
+    import time as _time
     from collections import defaultdict
 
     # 只推 top 5，按 level 排序
     items = sorted(items, key=lambda x: -x["level"])[:5]
+
+    # 收集所有 ticker，批量查行情
+    all_tickers = []
+    for item in items:
+        all_tickers.extend(item["analysis"].get("tickers", []))
+        all_tickers.extend(item["analysis"].get("etfs", []))
+    all_tickers = list(set(all_tickers))
+
+    quotes = {}
+    for ticker in all_tickers:
+        q = _fetch_ticker_quote(ticker)
+        if q:
+            quotes[ticker] = q
+        _time.sleep(0.5)
 
     bullish_count = sum(1 for i in items if i["direction"] == "bullish")
     bearish_count = sum(1 for i in items if i["direction"] == "bearish")
@@ -156,17 +200,18 @@ def _send_grouped_push(items, group_name):
             bullish = item["direction"] == "bullish"
             icon = "🔴" if bullish else "🟢"
 
-            # 标的
+            # 标的带行情
             targets = []
             for t in a.get("tickers", []):
-                targets.append(f"${t}")
+                q = quotes.get(t, "")
+                targets.append(f"${t}{q}")
             for e in a.get("etfs", []):
-                targets.append(f"${e}")
+                q = quotes.get(e, "")
+                targets.append(f"${e}{q}")
             for s in a.get("sectors", []):
                 targets.append(f"「{s}」")
             target_str = " ".join(targets) if targets else "宏观"
 
-            # 一行搞定：图标 + 标的 + 程度 + 原因
             lines.append(f"{icon} {target_str} {direction_cn}{level}/5")
             lines.append(f"   {a['reason']}")
             lines.append("")
