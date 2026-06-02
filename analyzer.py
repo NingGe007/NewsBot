@@ -13,7 +13,7 @@ client = OpenAI(
     base_url="https://api.deepseek.com"
 )
 
-ANALYSIS_PROMPT = """你是一位专业的投资分析师，覆盖美股、A股、港股三大市场。请分析以下新闻对相关市场的影响。
+ANALYSIS_PROMPT = """你是一个帮我盯盘的老哥们，覆盖美股、A股、港股。看看下面这条新闻，帮我判断一下影响。
 
 新闻标题：{title}
 新闻来源：{source}
@@ -25,14 +25,16 @@ ANALYSIS_PROMPT = """你是一位专业的投资分析师，覆盖美股、A股�
 {{
   "direction": "<bullish 或 bearish 或 neutral>",
   "level": <1到5的整数，影响程度：1=很轻微，2=有点影响，3=中等影响，4=影响很大，5=重大事件>,
-  "tickers": ["<相关股票代码，如AAPL、600519.SH、0700.HK>"],
+  "tickers": ["<相关股票代码，美股如AAPL，A股如600519.SH，港股如0700.HK>"],
   "sectors": ["<相关板块，用中文，如半导体>"],
   "etfs": ["<相关ETF代码，如QQQ>"],
   "commodities": ["<相关大宗商品，用中文，如原油>"],
-  "reason": "<用中文写1-2句专业简洁的解读，说明核心逻辑和影响路径>"
+  "reason": "<用中文写3-4句完整分析：① 这事儿是什么 ② 为什么影响市场（逻辑链）③ 具体利好/利空哪些标的 ④ 短期预期。像跟哥们掰开揉碎讲清楚一样>"
 }}
 
-注意：必须返回完整JSON，tickers/sectors/etfs/commodities 无关就返回 []"""
+注意：
+- reason 要写清楚逻辑链，不要只写结论，要让人看了知道"为什么"
+- 必须返回完整JSON，tickers/sectors/etfs/commodities 无关就返回 []"""
 
 
 def _parse_json(raw: str) -> dict | None:
@@ -68,11 +70,10 @@ def _call_deepseek(prompt: str) -> str | None:
         return None
 
 
-def analyze_article(title: str, source: str, content: str, market: str = "美股") -> dict | None:
+def analyze_article(title: str, source: str, content: str) -> dict | None:
     prompt = ANALYSIS_PROMPT.format(
         title=title,
         source=source,
-        market=market,
         content=content[:2000] if content else "（无正文摘要）"
     )
 

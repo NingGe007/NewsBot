@@ -32,7 +32,7 @@ def send_daily_report(report_type, content):
         print("[WARN] No WEBHOOK_URL configured, skipping push")
         return False
 
-    msg_title = f"📊 美股{report_type} | NewsBot"
+    msg_title = f"📊 {report_type} | NewsBot"
 
     try:
         resp = requests.post(WEBHOOK_URL, json={
@@ -40,7 +40,7 @@ def send_daily_report(report_type, content):
             "desp": content
         }, timeout=10)
         if resp.status_code == 200:
-            print(f"[OK] Daily report push success")
+            print(f"[OK] Daily report push success: {msg_title}")
             return True
         else:
             print(f"[ERR] Daily report push failed: {resp.status_code} {resp.text}")
