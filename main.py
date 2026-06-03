@@ -192,6 +192,7 @@ def _send_grouped_push(items, group_name):
         market_items = sorted(by_market[market], key=lambda x: -x["level"])
         if len(by_market) > 1:
             lines.append(f"**【{market}】**")
+            lines.append("")
 
         for item in market_items:
             a = item["analysis"]
@@ -200,7 +201,15 @@ def _send_grouped_push(items, group_name):
             bullish = item["direction"] == "bullish"
             icon = "🔴" if bullish else "🟢"
 
-            # 标的带行情
+            # 第一行：方向 + 程度
+            lines.append(f"{icon} **{direction_cn} {level}/5**")
+            lines.append("")
+
+            # 第二行：原因解读
+            lines.append(f"{a['reason']}")
+            lines.append("")
+
+            # 第三行：相关标的带行情
             targets = []
             for t in a.get("tickers", []):
                 q = quotes.get(t, "")
@@ -210,10 +219,11 @@ def _send_grouped_push(items, group_name):
                 targets.append(f"${e}{q}")
             for s in a.get("sectors", []):
                 targets.append(f"「{s}」")
-            target_str = " ".join(targets) if targets else "宏观"
+            if targets:
+                lines.append(f"📌 {' | '.join(targets)}")
+                lines.append("")
 
-            lines.append(f"{icon} {target_str} {direction_cn}{level}/5")
-            lines.append(f"   {a['reason']}")
+            lines.append("---")
             lines.append("")
 
     now = datetime.now().strftime("%H:%M")
