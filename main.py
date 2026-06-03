@@ -232,12 +232,17 @@ def _send_grouped_push(items, group_name):
             lines.append(f"{a['reason']}")
             lines.append("")
 
-            # 第三行：相关标的带行情（红涨绿跌）
+            # 第三行：相关标的带行情（红涨绿跌，去重）
             targets = []
+            seen_tickers = set()
             for t in a.get("tickers", []):
-                targets.append(_format_quote(t, quotes.get(t)))
+                if t not in seen_tickers:
+                    seen_tickers.add(t)
+                    targets.append(_format_quote(t, quotes.get(t)))
             for e in a.get("etfs", []):
-                targets.append(_format_quote(e, quotes.get(e)))
+                if e not in seen_tickers:
+                    seen_tickers.add(e)
+                    targets.append(_format_quote(e, quotes.get(e)))
             for s in a.get("sectors", []):
                 targets.append(f"「{s}」")
             if targets:
