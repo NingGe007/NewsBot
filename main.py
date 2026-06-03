@@ -120,11 +120,10 @@ def run():
     print(f"\n[完成] 推送 {pushed_count} 条，过滤噪音 {skipped_count} 条\n")
 
 
-def _fetch_ticker_quote(symbol: str) -> str:
-    """查询单个股票当日涨跌，返回如 ↑3.52%"""
+def _fetch_ticker_quote(symbol: str) -> dict | None:
+    """查询单个股票当日涨跌，返回 {pct, text}"""
     import requests
     ticker = symbol.upper().strip()
-    # 转换为 Yahoo Finance 格式
     if ticker.endswith(".SH"):
         yahoo_sym = ticker.replace(".SH", ".SS")
     elif ticker.endswith(".HK"):
@@ -142,11 +141,21 @@ def _fetch_ticker_quote(symbol: str) -> str:
         prev_close = meta.get("chartPreviousClose", 0)
         if prev_close and price:
             pct = ((price - prev_close) / prev_close) * 100
-            arrow = "↑" if pct >= 0 else "↓"
-            return f"{arrow}{abs(pct):.2f}%"
+            return {"pct": pct}
     except Exception:
         pass
-    return ""
+    return None
+
+
+def _format_quote(ticker: str, quote_data) -> str:
+    """格式化 ticker 行情：红涨绿跌"""
+    if not quote_data:
+        return f"${ticker}"
+    pct = quote_data["pct"]
+    if pct >= 0:
+        return f"🔴${ticker}↑{abs(pct):.2f}%"
+    else:
+        return f"🟢${ticker}↓{abs(pct):.2f}%"
 
 
 def _send_grouped_push(items, group_name):
@@ -164,11 +173,11 @@ def _send_grouped_push(items, group_name):
         all_tickers.extend(item["analysis"].get("etfs", []))
     all_tickers = list(set(all_tickers))
 
-    quotes = {}
+    quotes = {}  # {ticker: {pct: float}}
     for ticker in all_tickers:
-        q = _fetch_ticker_quote(ticker)
-        if q:
-            quotes[ticker] = q
+        qdata = _fetch_ticker_quote(ticker)
+        if qdata:
+            quotes[ticker] = qdata
         _time.sleep(0.5)
 
     bullish_count = sum(1 for i in items if i["direction"] == "bullish")
@@ -201,22 +210,34 @@ def _send_grouped_push(items, group_name):
             bullish = item["direction"] == "bullish"
             icon = "🔴" if bullish else "🟢"
 
-            # 第一行：方向 + 程度
-            lines.append(f"{icon} **{direction_cn} {level}/5**")
+            # 检测方向和实际涨跌是否矛盾
+            conflict = False
+            tickers_list = a.get("tickers", []) + a.get("etfs", [])
+            for t in tickers_list:
+                qdata = quotes.get(t)
+                if qdata:
+                    if bullish and qdata["pct"] < -1:
+                        conflict = True
+                        break
+                    elif not bullish and qdata["pct"] > 1:
+                        conflict = True
+                        break
+
+            # 第一行：方向 + 程度 + 矛盾警告
+            warn = " ⚠️" if conflict else ""
+            lines.append(f"{icon} **{direction_cn} {level}/5**{warn}")
             lines.append("")
 
             # 第二行：原因解读
             lines.append(f"{a['reason']}")
             lines.append("")
 
-            # 第三行：相关标的带行情
+            # 第三行：相关标的带行情（红涨绿跌）
             targets = []
             for t in a.get("tickers", []):
-                q = quotes.get(t, "")
-                targets.append(f"${t}{q}")
+                targets.append(_format_quote(t, quotes.get(t)))
             for e in a.get("etfs", []):
-                q = quotes.get(e, "")
-                targets.append(f"${e}{q}")
+                targets.append(_format_quote(e, quotes.get(e)))
             for s in a.get("sectors", []):
                 targets.append(f"「{s}」")
             if targets:
