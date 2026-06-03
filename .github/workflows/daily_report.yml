@@ -12,8 +12,9 @@ on:
           - 早报
           - 晚报
   schedule:
-    - cron: '0 0 * * 1-5'
-    - cron: '0 12 * * 1-5'
+    - cron: '57 23 * * 0-4'   # UTC 23:57 = 北京 7:57 → A股早报 + 美股晚报（美股刚收盘）
+    - cron: '33 8 * * 1-5'    # UTC 8:33  = 北京 16:33 → A股/港股晚报（A股刚收盘）
+    - cron: '3 13 * * 1-5'    # UTC 13:03 = 北京 21:03 → 美股早报（美股盘前）
 
 jobs:
   daily-report:
@@ -53,10 +54,16 @@ jobs:
           HOUR=$(date -u +%H)
           if [ -n "${{ github.event.inputs.report_type }}" ]; then
             python daily_report.py "${{ github.event.inputs.report_type }}"
-          elif [ "$HOUR" -le 6 ]; then
-            python daily_report.py 早报
-          else
-            python daily_report.py 晚报
+          elif [ "$HOUR" -ge 23 ] || [ "$HOUR" -le 1 ]; then
+            # 北京 7:57 — A股早报 + 美股晚报
+            python daily_report.py cn_morning
+            python daily_report.py us_evening
+          elif [ "$HOUR" -ge 8 ] && [ "$HOUR" -le 9 ]; then
+            # 北京 16:33 — A股/港股晚报
+            python daily_report.py cn_evening
+          elif [ "$HOUR" -ge 12 ] && [ "$HOUR" -le 14 ]; then
+            # 北京 21:03 — 美股早报
+            python daily_report.py us_morning
           fi
 
       - name: 保存状态文件

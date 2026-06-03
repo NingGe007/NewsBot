@@ -347,7 +347,25 @@ def send_evening_report():
 
 if __name__ == "__main__":
     report_type = sys.argv[1] if len(sys.argv) > 1 else "晚报"
-    if report_type == "早报":
+
+    if report_type == "cn_morning":
+        print("[A股早报] 开始生成...")
+        content = generate_report("早报", market_group="cn")
+        send_daily_report("A股/港股早报", content)
+    elif report_type == "cn_evening":
+        print("[A股晚报] 开始生成...")
+        content = generate_report("晚报", market_group="cn")
+        send_daily_report("A股/港股晚报", content)
+    elif report_type == "us_morning":
+        print("[美股早报] 开始生成...")
+        content = generate_report("早报", market_group="us")
+        send_daily_report("美股早报", content)
+    elif report_type == "us_evening":
+        print("[美股晚报] 开始生成...")
+        content = generate_report("晚报", market_group="us")
+        send_daily_report("美股晚报", content)
+        clear_today_pushed()
+    elif report_type == "早报":
         send_morning_report()
-    else:
+    elif report_type == "晚报":
         send_evening_report()
