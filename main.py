@@ -108,12 +108,15 @@ def run():
 
     save_seen_ids(seen_ids)
 
-    # 按市场分组推送：A股+港股一条，美股一条
+    # 按市场分组推送：A股+港股、日股、美股各一条
     if push_items:
         cn_items = [i for i in push_items if i["market"] in ("A股", "港股")]
+        jp_items = [i for i in push_items if i["market"] == "日股"]
         us_items = [i for i in push_items if i["market"] == "美股"]
         if cn_items:
             _send_grouped_push(cn_items, "A股/港股")
+        if jp_items:
+            _send_grouped_push(jp_items, "日股")
         if us_items:
             _send_grouped_push(us_items, "美股")
 
@@ -195,7 +198,7 @@ def _send_grouped_push(items, group_name):
         by_market[item["market"]].append(item)
 
     lines = []
-    for market in ["A股", "港股", "美股"]:
+    for market in ["A股", "港股", "日股", "美股"]:
         if market not in by_market:
             continue
         market_items = sorted(by_market[market], key=lambda x: -x["level"])

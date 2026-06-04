@@ -97,6 +97,7 @@ def fetch_market_indices() -> str:
         "^GSPC": "S&P 500",
         "^DJI": "道指",
         "^IXIC": "纳指",
+        "^N225": "日经225",
     }
     results = []
     for symbol, name in indices.items():
@@ -221,7 +222,7 @@ def generate_report(report_type: str, market_group: str = "all") -> str:
     """
     market_group: "us" = 美股, "cn" = A股+港股, "all" = 全部
     """
-    group_label = {"us": "美股", "cn": "A股/港股", "all": "全市场"}[market_group]
+    group_label = {"us": "美股", "cn": "A股/港股", "jp": "日股", "all": "全市场"}[market_group]
     print(f"[{report_type}:{group_label}] 抓取指数数据...")
     indices_str = fetch_market_indices()
     print(f"[{report_type}:{group_label}] 指数: {indices_str}")
@@ -233,6 +234,8 @@ def generate_report(report_type: str, market_group: str = "all") -> str:
         records = [r for r in all_records if r.get("market", "美股") == "美股"]
     elif market_group == "cn":
         records = [r for r in all_records if r.get("market", "美股") in ("A股", "港股")]
+    elif market_group == "jp":
+        records = [r for r in all_records if r.get("market", "美股") == "日股"]
     else:
         records = all_records
 
@@ -356,6 +359,14 @@ if __name__ == "__main__":
         print("[A股晚报] 开始生成...")
         content = generate_report("晚报", market_group="cn")
         send_daily_report("A股/港股晚报", content)
+    elif report_type == "jp_morning":
+        print("[日股早报] 开始生成...")
+        content = generate_report("早报", market_group="jp")
+        send_daily_report("日股早报", content)
+    elif report_type == "jp_evening":
+        print("[日股晚报] 开始生成...")
+        content = generate_report("晚报", market_group="jp")
+        send_daily_report("日股晚报", content)
     elif report_type == "us_morning":
         print("[美股早报] 开始生成...")
         content = generate_report("早报", market_group="us")

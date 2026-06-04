@@ -75,6 +75,19 @@ RSS_FEEDS = [
         "url": "https://news.google.com/rss/search?q=site:scmp.com+Hong+Kong+stocks+OR+Hang+Seng+OR+HK+market&hl=en&gl=HK&ceid=HK:en",
         "headers": HEADERS,
     },
+    # ─── 日股 ───
+    {
+        "source": "日经新闻",
+        "market": "日股",
+        "url": "https://news.google.com/rss/search?q=%E6%97%A5%E7%B5%8C%E5%B9%B3%E5%9D%87+OR+TOPIX+OR+%E6%9D%B1%E8%A8%BC+OR+%E6%97%A5%E6%9C%AC%E6%A0%AA&hl=ja&gl=JP&ceid=JP:ja",
+        "headers": HEADERS,
+    },
+    {
+        "source": "Japan Markets",
+        "market": "日股",
+        "url": "https://news.google.com/rss/search?q=site:reuters.com+Japan+stocks+OR+Nikkei+OR+BOJ+OR+yen&hl=en&gl=JP&ceid=JP:en",
+        "headers": HEADERS,
+    },
 ]
 
 
